@@ -15,12 +15,11 @@ class KMeans(object):
         self.clr_arr = ['blue','red','yellow','green','cyan','magenta']
 
     def __get_mins_and_maxs__(self, KNN_A):
-        # Find mins and maxs to get initial random centroids range
-        mins = [1e10] * len(KNN_A[0])
-        maxs = [-1e10] * len(KNN_A[0])
-
         number_of_points = len(KNN_A)
         number_of_dimensions = len(KNN_A[0])
+
+        mins = [1e10] * number_of_dimensions
+        maxs = [-1e10] * number_of_dimensions
 
         for i in range(number_of_points):
             for j in range(number_of_dimensions):
@@ -105,7 +104,8 @@ class KMeans(object):
         for i in range(len(grps)):
             for j in range(len(grps[i]['points'])):
                 dist = self.__get_distance_between_two_points__(
-                        KNN_C[i], grps[i]['points'][j])
+                        grps[i]['centroids'], 
+                        grps[i]['points'][j])
                 inertia += (dist) ** 2
 
         return inertia
@@ -113,6 +113,7 @@ class KMeans(object):
     def __update_centroids__(self, grps, KNN_A):
         KNN_C_New = []
         total_number_of_clusters = len(grps)
+        number_of_dimensions = len(KNN_A[0])
         mins, maxs = self.__get_mins_and_maxs__(KNN_A)
                 
         for i in range(total_number_of_clusters):
@@ -124,7 +125,6 @@ class KMeans(object):
                 grps[i]['centroids'] = KNN_C_New[-1]
                 continue # then continue
                 
-            number_of_dimensions = len(grps[i]['points'][0])
             cnt_locs = [0] * number_of_dimensions
 
             for j in range(number_of_dimensions):
