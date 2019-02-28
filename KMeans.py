@@ -126,15 +126,15 @@ class KMeans(object):
                 continue # then continue
                 
             number_of_dimensions = len(grps[i]['points'][0])
-            dim_sums = [0] * number_of_dimensions
+            cnt_locs = [0] * number_of_dimensions
 
             for j in range(number_of_dimensions):
                 for k in range(number_of_points_in_cluster):
-                    dim_sums[j] += grps[i]['points'][k][j]
-                dim_sums[j] /= number_of_points_in_cluster
+                    cnt_locs[j] += grps[i]['points'][k][j]
+                cnt_locs[j] /= number_of_points_in_cluster
 
-            grps[i]['centroids'] = dim_sums
-            KNN_C_New.append(dim_sums)
+            grps[i]['centroids'] = cnt_locs
+            KNN_C_New.append(cnt_locs)
 
         return KNN_C_New, grps
 
