@@ -65,7 +65,7 @@ class KMeans(object):
         for i in range(number_of_dimensions): stds[i] = \
             (stds[i]/num_pts)**0.5
 
-        return [means, stds]
+        return means, stds
 
     def __get_distance_between_two_points__(self, arr1, arr2):
         err_str = 'Error in "__get_distance_between_two_points__":\n'
@@ -146,10 +146,9 @@ class KMeans(object):
     def __initial_dispersement_of_centroids__(self, KNN_A, num_cts, 
         method='mn_2sg_rng'):
         #  method='mean_std_spiral'
-        dist_params = self.__get_distribution_parameters_of_pts__(
+        means, stds = self.__get_distribution_parameters_of_pts__(
             KNN_A)
-        means = dist_params[0]
-        stds  = dist_params[1] 
+        
         two_sig  = []
         for element in stds:
             two_sig.append(element*2.0)
@@ -186,7 +185,6 @@ class KMeans(object):
                 radius += 1
 
     def determine_k_clusters(self, KNN_A):
-        ans = {}
         min_inertia = 1e10
         for attempt in range(self.n_init):
             KNN_C = self.__initial_dispersement_of_centroids__(
