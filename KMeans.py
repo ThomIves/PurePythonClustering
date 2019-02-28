@@ -153,18 +153,18 @@ class KMeans(object):
         for element in stds:
             two_sig.append(element*2.0)
 
-        num_dims = len(means)
         KNN_C = []
 
         if method == 'mn_2sg_rng':
             for i in range(num_cts):
                 KNN_C.append(
                     self.__get_random_point_from_point__(
-                        means.copy(),two_sig.copy()))
+                        means,two_sig))
 
             return KNN_C
 
         elif method == 'mean_std_spiral':
+            num_dims = len(means)
             KNN_C.append(means.copy())
             cnt = 1; radius = 1
             while True:
