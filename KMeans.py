@@ -47,23 +47,25 @@ class KMeans(object):
         return pt
 
     def __get_distribution_parameters_of_pts__(self, KNN_A):
+        num_pts = len(KNN_A)
         number_of_dimensions = len(KNN_A[0]) 
+
         means = [0] * number_of_dimensions
         stds  = [0] * number_of_dimensions
-        num_pts = len(KNN_A)
 
+        # Determine means for each dimension
         for arr in KNN_A:
             for i in range(number_of_dimensions):
                 means[i] += arr[i]
+        for i in range(number_of_dimensions): 
+            means[i] /= num_pts
 
-        for i in range(number_of_dimensions): means[i] /= num_pts
-
+        # Determine standard deviations for each dimension
         for arr in KNN_A:
             for i in range(number_of_dimensions):
                 stds[i] += (means[i] - arr[i])**2
-
-        for i in range(number_of_dimensions): stds[i] = \
-            (stds[i]/num_pts)**0.5
+        for i in range(number_of_dimensions): 
+            stds[i] = (stds[i] / num_pts)**0.5
 
         return means, stds
 
