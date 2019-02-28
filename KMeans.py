@@ -110,15 +110,14 @@ class KMeans(object):
 
         return inertia
 
-    def __update_centroids__(self, grps):
+    def __update_centroids__(self, grps, KNN_A):
         KNN_C_New = []
         total_number_of_clusters = len(grps)
-        
+        mins, maxs = self.__get_mins_and_maxs__(KNN_A)
+                
         for i in range(total_number_of_clusters):
             number_of_points_in_cluster = len(grps[i]['points'])
             if number_of_points_in_cluster == 0: 
-                # if no members are in the centroid group ...
-                mins, maxs = self.__get_mins_and_maxs__(KNN_A)
                 # assign that centroid a new random location
                 KNN_C_New.append(
                     self.__get_random_point_in_range__(mins,maxs))
@@ -203,7 +202,7 @@ class KMeans(object):
                 # Find groups by closest to centroid
                 grps = self.__group_points_by_centroids__(grps, KNN_C, KNN_A)
                 
-                KNN_C_New, grps = self.__update_centroids__(grps)
+                KNN_C_New, grps = self.__update_centroids__(grps, KNN_A)
 
                 delta_As = self.__find_Arrays_delta__(KNN_C, KNN_C_New)
             
