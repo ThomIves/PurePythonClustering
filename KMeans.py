@@ -99,7 +99,7 @@ class KMeans(object):
 
         return grps
 
-    def __determine_inertia__(self, grps, KNN_C, KNN_A):
+    def __determine_inertia__(self, grps):
         inertia = 0
         for i in range(len(grps)):
             for j in range(len(grps[i]['points'])):
@@ -213,7 +213,7 @@ class KMeans(object):
                 cnt += 1
 
             #######
-            current_inertia = self.__determine_inertia__(grps, KNN_C, KNN_A)
+            current_inertia = self.__determine_inertia__(grps)
             if current_inertia < min_inertia:
                 min_inertia = current_inertia
                 grps_best = grps
