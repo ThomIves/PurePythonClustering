@@ -90,12 +90,13 @@ class KMeans(object):
                 dist = self.__get_distance_between_two_points__(
                     ptc, pta)
                 if dist < minD:
-                    closest_pt = i
+                    closest_centroid = i
                     minD = dist
 
-            grps[closest_pt]['points'].append(pta)
-            if grps[closest_pt]['centroids'] == []:
-                grps[closest_pt]['centroids'] = KNN_C[closest_pt]
+            grps[closest_centroid]['points'].append(pta)
+            if grps[closest_centroid]['centroids'] == []:
+                grps[closest_centroid]['centroids'] = \
+                    KNN_C[closest_centroid]
 
         return grps
 
