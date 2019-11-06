@@ -145,7 +145,7 @@ class KMeans(object):
 
         return dist_sum
 
-    def __initial_dispersement_of_centroids__(self, KNN_A, num_cts, 
+    def __initial_disbursement_of_centroids__(self, KNN_A, num_cts, 
         method='mn_2sg_rng'):
         #  method='mean_std_spiral'
         means, stds = self.__get_distribution_parameters_of_pts__(
@@ -189,7 +189,7 @@ class KMeans(object):
     def determine_k_clusters(self, KNN_A):
         min_inertia = 1e10
         for attempt in range(self.n_init):
-            KNN_C = self.__initial_dispersement_of_centroids__(
+            KNN_C = self.__initial_disbursement_of_centroids__(
                 KNN_A, self.n_clusters)
             
             # Loop beginning
