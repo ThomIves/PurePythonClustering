@@ -5,19 +5,48 @@ import sys
 import time
 
 
-class KMeans(object):
-    def __init__(self, n_clusters=8, init='mn_2sg_rng', n_init=10,
-                 max_iter=300, tol=1e-4):
+class KMeans:
+    """
+    Finds clusters of points and their centroids for a number of clusters.
+    """
+    def __init__(self, n_clusters=8,
+        init='mn_2sg_rng', n_init=10, max_iter=300):
+        """
+        Initialization method for instantiating this class.
+        ...
+        Keyword Arguments:
+            n_clusters {number} -- divide the data into this number of
+                clusters (default: {8})
+            init {str} -- the algorithm used to determine initial centroid
+                locations (default: {'mn_2sg_rng'})
+            n_init {number} -- the number of times to group the data into
+                n_clusters - to ensure bad initial centroid locations
+                don't prevent finding good clustering (default: {10})
+            max_iter {number} -- the limit on the number of cycles to converge
+                on centroid locations (default: {300})
+            clr_arr {array} -- a convenience array for colors for plotting.
+        """
 
         self.n_clusters = n_clusters
         self.init = init
         self.n_init = n_init
         self.max_iter = max_iter
-        self.tol = tol
 
         self.clr_arr = ['blue', 'red', 'yellow', 'green', 'cyan', 'magenta']
 
     def __get_mins_and_maxs__(self, KNN_A):
+        """
+        Find the minimum and maximum values for all the points in KNN_A
+        for all the dimensions.
+
+        Arguments:
+            KNN_A {array of arrays} -- each array in the array has all values
+                for each dimension of each point.
+        ...
+        Returns:
+            [floats], [floats] -- the first array has the minimum points
+                for each dimension; the second has the maximum ones.
+        """
         number_of_points = len(KNN_A)
         number_of_dimensions = len(KNN_A[0])
 
@@ -32,6 +61,18 @@ class KMeans(object):
         return mins, maxs
 
     def __get_random_point_from_point__(self, arr, half_range):
+        """
+        Kicks a point to a new location between -half_range and +half_range
+        in all dimensions.
+        ...
+        Arguments:
+            arr {[floats]} -- an array of dimensional elements for a point.
+            half_range {array} -- an array of dimensional values that are the
+                negative and positive limits of a new random dimesional value.
+        ...
+        Returns:
+            [floats] -- all dimensional values for the new point.
+        """
         number_of_dimensions = len(arr)
 
         pt = []
@@ -42,6 +83,17 @@ class KMeans(object):
         return pt
 
     def __get_random_point_in_range__(self, mins, maxs):
+        """
+        Create a random multidimensional point between mins and maxs
+            for each dimension.
+        ...
+        Arguments:
+            mins {[floats]} -- minimum values for each dimension
+            maxs {[floats]} -- maximum values for each dimension
+        ...
+        Returns:
+            [floats] -- all dimensional values for the new point.
+        """
         pt = []
         for i in range(len(mins)):
             pt.append(random.uniform(mins[i], maxs[i]))
@@ -49,6 +101,17 @@ class KMeans(object):
         return pt
 
     def __get_distribution_parameters_of_pts__(self, KNN_A):
+        """
+        Determine the statistics for each dimension of the points in KNN_A.
+        ...
+        Arguments:
+            KNN_A {array of arrays} -- each array in the array has all values
+                for each dimension of each point.
+        ...
+        Returns:
+            [floats], [floats] -- the arrays have the means and standard
+                deviations for each dimension of the points in KNN_A.
+        """
         num_pts = len(KNN_A)
         number_of_dimensions = len(KNN_A[0])
 
@@ -72,6 +135,22 @@ class KMeans(object):
         return means, stds
 
     def __get_distance_between_two_points__(self, arr1, arr2):
+        """
+        The function name says it all. :-)
+        ...
+        Arguments:
+            arr1 {array of floats} -- the value of each dimension for the
+                first point.
+            arr2 {array of floats} -- the value of each dimension for the
+                second point.
+        ...
+        Returns:
+            array of floats -- the euclidean distance between the two points.
+        ...
+        Raises:
+            ArithmeticError -- makes sure that each point has the same
+                dimensions.
+        """
         err_str = 'Error in "__get_distance_between_two_points__":\n'
         err_str += 'Point arrays do not have the same dimensions.'
 
@@ -85,6 +164,23 @@ class KMeans(object):
         return sq_dist**0.5
 
     def __group_points_by_centroids__(self, grps, KNN_C, KNN_A):
+        """
+        Go thru all points and determine which centroid each point is
+        closest to. Group the points with their closest centroids in grps.
+
+        Arguments:
+            grps {dictionary of dictionaries} -- each dictionary represents
+                the points belonging to a centroid. See initial formation in
+                determine_k_clusters.
+            KNN_C {array of arrays} -- each array in the array has all values
+                for each dimension of each centroid.
+            KNN_A {array of arrays} -- each array in the array has all values
+                for each dimension of each point.
+
+        Returns:
+            [dictionary of dictionaries] -- the updated realtions of points
+                associated to their nearest centroids.
+        """
         for pta in KNN_A:
             minD = 1e10
             for i in range(len(KNN_C)):
@@ -103,6 +199,18 @@ class KMeans(object):
         return grps
 
     def __determine_inertia__(self, grps):
+        """
+        Calculates the inertia, which is simply the sum of the square
+            distances of each point from it's current centroid.
+
+        Arguments:
+            grps {dictionary of dictionaries} -- each dictionary represents
+                the points belonging to a centroid. See initial formation in
+                determine_k_clusters.
+
+        Returns:
+            float -- the calculated inertia value
+        """
         inertia = 0
         for i in range(len(grps)):
             for j in range(len(grps[i]['points'])):
@@ -114,6 +222,23 @@ class KMeans(object):
         return inertia
 
     def __update_centroids__(self, grps, KNN_A):
+        """
+        Once points are in groups of being closest to a certain centroid,
+            the centroids can be moved to the center of those points.
+
+        Arguments:
+            grps {dictionary of dictionaries} -- each dictionary represents
+                the points belonging to a centroid. See initial formation in
+                determine_k_clusters.
+            KNN_A {array of arrays} -- each array in the array has all values
+                for each dimension of each point.
+
+        Returns:
+            array of arrays -- the updated centroid points.
+            dictionary of dictionaries - the groups with updated centroid
+                locations.
+        """
+
         KNN_C_New = []
         total_number_of_clusters = len(grps)
         number_of_dimensions = len(KNN_A[0])
@@ -121,12 +246,12 @@ class KMeans(object):
 
         for i in range(total_number_of_clusters):
             number_of_points_in_cluster = len(grps[i]['points'])
-            if number_of_points_in_cluster == 0: 
+            if number_of_points_in_cluster == 0:
                 # assign that centroid a new random location
                 KNN_C_New.append(
-                    self.__get_random_point_in_range__(mins,maxs))
+                    self.__get_random_point_in_range__(mins, maxs))
                 grps[i]['centroids'] = KNN_C_New[-1]
-                continue # then continue
+                continue  # then continue
 
             cnt_locs = [0] * number_of_dimensions
 
@@ -141,6 +266,19 @@ class KMeans(object):
         return KNN_C_New, grps
 
     def __find_Arrays_delta__(self, KNN_C, KNN_C_New):
+        """
+        Determine the distance between the last and current centroids.
+
+        Arguments:
+            KNN_C {array of arrays} -- last centroid locations where each
+                array in the array has all values for each dimension of
+                each centroid.
+            KNN_C_New {array of arrays} -- latest centroid locations.
+
+        Returns:
+            float -- the sum of the distances between the current and the
+                last centroids.
+        """
         dist_sum = 0
         for i in range(len(KNN_C)):
             dist_sum += self.__get_distance_between_two_points__(
@@ -148,8 +286,21 @@ class KMeans(object):
 
         return dist_sum
 
-    def __initial_disbursement_of_centroids__(self, KNN_A, num_cts,
-                                              method='mn_2sg_rng'):
+    def __initial_disbursement_of_centroids__(
+      self, KNN_A, n_clusters, method='mn_2sg_rng'):
+        """
+        Set initial positions for the centroids.
+
+        Arguments:
+            KNN_A {array of arrays} -- each array in the array has all values
+                for each dimension of each point.
+            n_clusters {integer} -- the algorithm is attempting to form the
+                points into this many clusters.
+
+        Keyword Arguments:
+            method {string} -- the method chosen for establishing the initial
+                centroid locations (default: {'mn_2sg_rng'})
+        """
         #  method='mean_std_spiral'
         means, stds = self.__get_distribution_parameters_of_pts__(
             KNN_A)
@@ -161,7 +312,7 @@ class KMeans(object):
         KNN_C = []
 
         if method == 'mn_2sg_rng':
-            for i in range(num_cts):
+            for i in range(n_clusters):
                 KNN_C.append(
                     self.__get_random_point_from_point__(
                         means, two_sig))
@@ -178,19 +329,34 @@ class KMeans(object):
                     KNN_C.append(means.copy())
                     KNN_C[-1][i] += radius * stds[i]
                     cnt += 1
-                    if cnt >= num_cts:
+                    if cnt >= n_clusters:
                         return KNN_C
 
                 for i in range(num_dims):
                     KNN_C.append(means.copy())
                     KNN_C[-1][i] -= radius * stds[i]
                     cnt += 1
-                    if cnt >= num_cts:
+                    if cnt >= n_clusters:
                         return KNN_C
 
                 radius += 1
 
     def determine_k_clusters(self, KNN_A):
+        """
+        The top level routine for attempting to best group the points for
+        the chosen number of clusters.
+
+        Arguments:
+            KNN_A {array of arrays} -- each array in the array has all values
+                for each dimension of each point.
+
+        Returns:
+            a dictionary of dictionaries -- the best clustering of points
+                along with their centroid locations. This grouping was
+                found to have the lowest intertia too for the n_init times
+                that the clustering was determined starting from random
+                initial centroid locations.
+        """
         min_inertia = 1e10
         for attempt in range(self.n_init):
             KNN_C = self.__initial_disbursement_of_centroids__(
@@ -201,7 +367,7 @@ class KMeans(object):
             while cnt < self.max_iter:
                 grps = {}
                 for i in range(self.n_clusters):
-                    grps[i] = {'centroids':[], 'points':[]}
+                    grps[i] = {'centroids': [], 'points': []}
 
                 # Find groups by closest to centroid
                 grps = self.__group_points_by_centroids__(grps, KNN_C, KNN_A)
@@ -210,7 +376,7 @@ class KMeans(object):
 
                 delta_As = self.__find_Arrays_delta__(KNN_C, KNN_C_New)
 
-                if delta_As == 0: break
+                break if delta_As == 0
 
                 KNN_C = KNN_C_New
 
@@ -227,6 +393,14 @@ class KMeans(object):
         return grps_best
 
     def plot_clusters(self, grps):
+        """
+        Plot clusters :-)
+
+        Arguments:
+            grps {dictionary of dictionaries} -- each dictionary represents
+                the points belonging to a centroid. See initial formation in
+                determine_k_clusters.
+        """
         Xc = []
         Yc = []
 
