@@ -3,11 +3,13 @@
 # Importing the libraries
 from sklearn.cluster import KMeans
 import matplotlib.pyplot as plt
-import sys, random
+import sys
+import random
 
-clr_arr = ['blue','red','yellow','green','cyan']
+clr_arr = ['blue', 'red', 'yellow', 'green', 'cyan']
 
 ###############################################################################
+
 
 class CreateFakeData(object):
     def __init__(self, seeds, half_range=2, points_per_cluster=10):
@@ -20,7 +22,7 @@ class CreateFakeData(object):
 
         pt = []
         for i in range(number_of_dimensions):
-            var = random.uniform(-half_range,half_range)
+            var = random.uniform(-half_range, half_range)
             pt.append(arr[i]+var)
 
         return pt
@@ -28,7 +30,7 @@ class CreateFakeData(object):
     def __get_random_point_in_range__(self, mins, maxs):
         pt = []
         for i in range(len(mins)):
-            pt.append(random.uniform(mins[i],maxs[i]))
+            pt.append(random.uniform(mins[i], maxs[i]))
 
         return pt
 
@@ -37,7 +39,7 @@ class CreateFakeData(object):
         KNN_A = []
 
         for seed in self.seeds:
-            for i in range(self.points_per_cluster): 
+            for i in range(self.points_per_cluster):
                 KNN_A.append(self.__get_random_point_from_point__(
                     seed, self.half_range))
 
@@ -45,9 +47,10 @@ class CreateFakeData(object):
 
 ###############################################################################
 
+
 # Setup Fake Data
-clr_arr = ['blue','red','yellow','green','cyan','magenta']
-seeds = [[3,10], [10,3], [3,3], [10,10], [17,6]]
+clr_arr = ['blue', 'red', 'yellow', 'green', 'cyan', 'magenta']
+seeds = [[3, 10], [10, 3], [3, 3], [10, 10], [17, 6]]
 half_range = 2
 
 # Create Fake Data
@@ -56,8 +59,8 @@ KNN_A = fake_data.create_fake_data()
 
 ###############################################################################
 
-# Fitting K-Means to the dataset 
-kmeans = KMeans(n_clusters = len(seeds), init = 'random', random_state = 42)
+# Fitting K-Means to the dataset
+kmeans = KMeans(n_clusters=len(seeds), init='random', random_state=42)
 y_kmeans = kmeans.fit_predict(KNN_A)
 print(kmeans.inertia_)
 
@@ -68,13 +71,14 @@ KNN_C = kmeans.cluster_centers_.tolist()
 
 grps = {}
 for i in range(len(seeds)):
-    grps[i] = {'X':[], 'Y':[]}
+    grps[i] = {'X': [], 'Y': []}
 
-Xc = []; Yc = []
+Xc = []
+Yc = []
 
 for arr in KNN_C:
-    Xc.append(arr[0]) # print(Xc)
-    Yc.append(arr[1]) # print(Yc)
+    Xc.append(arr[0])  # print(Xc)
+    Yc.append(arr[1])  # print(Yc)
 
 for i in range(len(groups)):
     grps[groups[i]]['X'].append(KNN_A[i][0])
