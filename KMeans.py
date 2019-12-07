@@ -9,8 +9,7 @@ class KMeans:
     """
     Finds clusters of points and their centroids for a number of clusters.
     """
-    def __init__(
-      self, n_clusters=8, init='mn_2sg_rng', n_init=10, max_iter=300):
+    def __init__(self, n_clusters=8, init='mn_2sg_rng', n_init=10, max_iter=300):
         """
         Initialization method for instantiating this class.
         ...
@@ -220,7 +219,6 @@ class KMeans:
                         grps[i]['centroids'],
                         grps[i]['points'][j])
                 inertia += (dist) ** 2
-                # grps[i]['inertia'] += (dist) ** 2  # Needed for master_inertia
 
         return inertia
 
@@ -239,28 +237,47 @@ class KMeans:
         """
 
         # Part of master_inertia calculations - find centroid of centroids
+        # grps[i]['inertia'] += (dist) ** 2  # Needed for master_inertia
+        number_of_dimensions = len(KNN_A[0])
+        total_number_of_clusters = len(grps)
+        total_number_of_points = len(KNN_A)
+
         self.total_cnt = [0] * number_of_dimensions
+        self.cnt_of_cnts = [0] * number_of_dimensions
+        self.clus_DOC = self.n_clusters - 1
+
+        # Find centroid of all points
         for i in range(number_of_dimensions):
             for j in range(total_number_of_clusters):
                 number_of_points_in_cluster = len(grps[j]['points'])
                 for k in range(number_of_points_in_cluster):
                     self.total_cnt[i] += grps[j]['points'][k][i]
-        
-            self.total_cnt[i] /= len(KNN_A)
 
+            self.total_cnt[i] /= total_number_of_points
+
+        # Find centroid of all centroids
+        for i in range(number_of_dimensions):
+            for j in range(total_number_of_clusters):
+                self.cnt_of_cnts[i] += grps[j]['centroids'][i]
+
+            self.cnt_of_cnts[i] /= total_number_of_clusters
+
+        # Find master inertia
         self.master_inertia = 0
         for i in range(len(grps)):
             dist = self.__get_distance_between_two_points__(
                 grps[i]['centroids'], self.total_cnt)
-            self.master_inertia += dist ** 2
+            self.master_inertia += (dist / self.clus_DOC) ** 2
 
-        self.clus_mod_0 = (self.master_inertia / self.inertia_) #* (self.n_clusters - 1) ** 2
-        self.clus_mod_a = self.clus_mod_0 / (self.n_clusters - 1) ** 0.5
-        self.clus_mod_1 = self.master_inertia / (self.n_clusters - 1)
-        self.clus_mod_2 = self.master_inertia / (self.n_clusters - 1) ** 2
-        self.clus_mod_3 = self.master_inertia / self.inertia_
-        self.clus_mod_4 = self.clus_mod_3 / (self.n_clusters - 1)
-        self.clus_mod_5 = self.clus_mod_3 / (self.n_clusters - 1) ** 2
+        # #####################################################################
+        # self.clus_mod_0 = (self.master_inertia / self.inertia_)
+        #  * (self.n_clusters - 1) ** 2
+        # self.clus_mod_a = self.clus_mod_0 / (self.n_clusters - 1) ** 0.5
+        # self.clus_mod_1 = self.master_inertia / (self.n_clusters - 1)
+        # self.clus_mod_2 = self.master_inertia / (self.n_clusters - 1) ** 2
+        # self.clus_mod_3 = self.master_inertia / self.inertia_
+        # self.clus_mod_4 = self.clus_mod_3 / (self.n_clusters - 1)
+        # self.clus_mod_5 = self.clus_mod_3 / (self.n_clusters - 1) ** 2
 
         # self.master_inertia = self.master_inertia ** 0.5
 
@@ -422,7 +439,7 @@ class KMeans:
                 delta_As = self.__find_Arrays_delta__(KNN_C, KNN_C_New)
 
                 if delta_As == 0:
-                    break 
+                    break
 
                 KNN_C = KNN_C_New
 
@@ -449,8 +466,8 @@ class KMeans:
                 the points belonging to a centroid. See initial formation in
                 determine_k_clusters.
         """
-        Xc = [self.total_cnt[0]]
-        Yc = [self.total_cnt[1]]
+        Xc = [self.total_cnt[0], self.cnt_of_cnts[0]]
+        Yc = [self.total_cnt[1], self.cnt_of_cnts[1]]
 
         for i in range(len(grps)):
             Xc.append(grps[i]['centroids'][0])
@@ -477,7 +494,7 @@ class KMeans:
 
 ###############################################################################
 
-class CreateFakeData(object):
+class CreateFakeData:
     def __init__(self, seeds, half_range=2, points_per_cluster=10):
         self.seeds = seeds
         self.half_range = half_range
@@ -531,21 +548,25 @@ def scatter_plot_points(pts):
 ###############################################################################
 # Setup Data
 clr_arr = ['blue', 'red', 'yellow', 'green', 'cyan', 'magenta']
-seeds = [[3, 10], [10, 3], [3, 3], [10, 10], [17, 6]]
+seeds = [[3, 10], [10, 3], [3, 3], [10, 10], [17, 10], [17, 3]]
 half_range = 2
 
 # Create Fake Data
-fake_data = CreateFakeData(seeds)
+fake_data = CreateFakeData(seeds, points_per_cluster=30)
 KNN_A = fake_data.create_fake_data()
 # scatter_plot_points(KNN_A)
 
 # Find the Clusters
-for i in range(2,12):
-    kmeans = KMeans(n_clusters=i)
-    grps = kmeans.determine_k_clusters(KNN_A)
-    print(f'{i}: {kmeans.clus_mod_0}')
+for i in range(2, 11):
+    km = KMeans(n_clusters=i)
+    grps = km.determine_k_clusters(KNN_A)
+    # print(f'{i}:')
     # print(f'\t{kmeans.inertia_}')
     # print(f'\t{kmeans.master_inertia}')
+    # print(f'\t{kmeans.inertia_ * kmeans.master_inertia}')
+    # print(f'\t{kmeans.clus_DOC}')
+    qnt = km.inertia_ / (km.master_inertia)  # / km.clus_DOC ** 3)
+    print(f'{i}: {qnt}')
     # print(f'\t{kmeans.clus_mod_0}')
     # print(f'\t{kmeans.clus_mod_a}')
     # print(f'\t{kmeans.clus_mod_1} for {i} clusters.')
@@ -553,6 +574,6 @@ for i in range(2,12):
     # print(f'\t{kmeans.clus_mod_3} for {i} clusters.')
     # print(f'\t{kmeans.clus_mod_4} for {i} clusters.')
     # print(f'\t{kmeans.clus_mod_5} for {i} clusters.')
-# kmeans.plot_clusters(grps)
+    # kmeans.plot_clusters(grps)
 
 ###############################################################################
