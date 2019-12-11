@@ -9,7 +9,8 @@ class KMeans:
     """
     Finds clusters of points and their centroids for a number of clusters.
     """
-    def __init__(self, n_clusters=8, init='mn_2sg_rng', n_init=10, max_iter=300):
+    def __init__(
+      self, n_clusters=8, init='mn_2sg_rng', n_init=10, max_iter=300):
         """
         Initialization method for instantiating this class.
         ...
@@ -222,7 +223,7 @@ class KMeans:
 
         return inertia
 
-    def __determine_master_inertia__(self, grps, KNN_A):
+    def __determine_ratio_of_inertias__(self, grps, KNN_A):
         """
         Calculates the master inertia, which is simply the sum of the square
             distances of each centroid to the centroid of the centroids.
@@ -268,6 +269,8 @@ class KMeans:
             dist = self.__get_distance_between_two_points__(
                 grps[i]['centroids'], self.total_cnt)
             self.master_inertia += (dist / self.clus_DOC) ** 2
+
+        self.ratio_of_inertias = self.inertia_ / self.master_inertia
 
     def __update_centroids__(self, grps, KNN_A):
         """
@@ -439,9 +442,21 @@ class KMeans:
                 grps_best = grps
 
         self.inertia_ = min_inertia
-        self.__determine_master_inertia__(grps, KNN_A)
+        self.__determine_ratio_of_inertias__(grps, KNN_A)
 
         return grps_best
+
+    def find_best_number_of_clusters(self, KNN_A, min_clusters, max_clusters):
+        min_ratio = 1.0e30
+        for i in range(min_clusters, max_clusters + 1):
+            self.n_clusters = i
+            self.determine_k_clusters(KNN_A)
+            if self.ratio_of_inertias < min_ratio:
+                best_number_of_clusters = i
+                min_ratio = self.ratio_of_inertias
+
+        self.n_clusters = best_number_of_clusters
+        self.determine_k_clusters(KNN_A)
 
     def plot_clusters(self, grps):
         """
@@ -531,6 +546,14 @@ def scatter_plot_points(pts):
     plt.show()
 
 
+def line_plot(X, Y, x_label, y_label, title):
+    plt.plot(X, Y)
+    plt.xlabel(x_label)
+    plt.ylabel(y_label)
+    plt.title(title)
+    plt.show()
+
+
 ###############################################################################
 # Setup Data
 clr_arr = ['blue', 'red', 'yellow', 'green', 'cyan', 'magenta']
@@ -538,15 +561,41 @@ seeds = [[3, 10], [10, 3], [3, 3], [10, 10], [17, 10], [17, 3]]
 half_range = 2
 
 # Create Fake Data
-fake_data = CreateFakeData(seeds, points_per_cluster=30)
+fake_data = CreateFakeData(seeds, points_per_cluster=40)
 KNN_A = fake_data.create_fake_data()
 # scatter_plot_points(KNN_A)
 
+km = KMeans(n_clusters=2)
+km.find_best_number_of_clusters(KNN_A, 2, 11)
+print(km.n_clusters)
+sys.exit()
+
 # Find the Clusters
-for i in range(2, 11):
+Y1 = []
+Y2 = []
+Y3 = []
+X = list(range(2, 11))
+for i in X:
     km = KMeans(n_clusters=i)
     grps = km.determine_k_clusters(KNN_A)
-    qnt = km.inertia_ / (km.master_inertia)
-    print(f'{i}: {qnt}')
+    Y1.append(km.inertia_)
+    Y2.append(km.master_inertia)
+    Y3.append(km.ratio_of_inertias)
+    # print(f'{i}: {qnt}')
 
-###############################################################################
+
+line_plot(
+    X, Y1,
+    'Number Of Clusters', 'Standard Inertia',
+    'Standard Inertia vs Number Of Clusters')
+
+line_plot(
+    X, Y2,
+    'Number Of Clusters', 'Master Inertia',
+    'Master Inertia vs Number Of Clusters')
+
+line_plot(
+    X, Y3,
+    'Number Of Clusters', 'Standard Inertia to Master Inertia Ratio',
+    'Standard Inertia to Master Inertia Ratio vs Number Of Clusters')
+# #############################################################################
