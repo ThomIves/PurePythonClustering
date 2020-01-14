@@ -120,7 +120,7 @@ class Clusters_AI:
         for radius in self.radii_list:
             indices = self.radii_D[radius]  # ["indices"]
             # mids = self.radii_D[radius]["mids"]
-            print(f'\tRadius: {radius}, indices: {indices}')  # , mids: {mids}')
+            print(f'\tRadius: {radius}, indices: {indices}')  # ,mids: {mids}')
 
         print()
 
