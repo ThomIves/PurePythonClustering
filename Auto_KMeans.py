@@ -223,7 +223,7 @@ class KMeans:
 
         return inertia
 
-    def __determine_ratio_of_inertias__(self, grps, KNN_A):
+    def __determine_ratio_of_inertias__(self, grps, KNN_A):  # New
         """
         Calculates the master inertia, which is simply the sum of the square
             distances of each centroid to the centroid of the centroids.
@@ -271,6 +271,37 @@ class KMeans:
             self.master_inertia += (dist / self.clus_DOC) ** 2
 
         self.ratio_of_inertias = self.inertia_ / self.master_inertia
+
+    def __determine_total_centroid_accelerations(self, grps):  # New
+        pt_mss_D = {}
+        for group in grps.keys():
+            pt_mss_D[group] = {}
+            pt_mss_D[group]['mass'] = len(grps[group]['points'])
+            pt_mss_D[group]['coordinates'] = grps[group]['centroids']
+
+        mg = Mass_Gravity_Simulator(pt_mss_D)
+
+        self.avg_force = mg.avg_force
+
+        # cents = []
+        # for group in grps.keys():
+        #     v1 = f'Group {group} centroid is {grps[group]["centroids"]},'
+        #     v2 = f'\t and has {len(grps[group]["points"])} points.'
+        #     # print(v1)
+        #     # print(v2)
+        #     curr_list = [len(grps[group]["points"])] +
+        #                  grps[group]["centroids"]
+        #     cents.append(curr_list)
+
+        # # print(cents)
+
+        # lm = Locations_Metrics(cents)
+        # lm.get_deltas_between_points()
+        # lm.get_scalar_distances_between_points()
+        # total_accel = lm.get_sum_of_all_accelerations()
+        # # print(lm.deltas_matrix)
+        # # print(lm.scalar_distances)
+        # return total_accel  # / (self.n_clusters - 1))
 
     def __update_centroids__(self, grps, KNN_A):
         """
@@ -442,21 +473,33 @@ class KMeans:
                 grps_best = grps
 
         self.inertia_ = min_inertia
-        self.__determine_ratio_of_inertias__(grps, KNN_A)
+        # self.__determine_ratio_of_inertias__(grps, KNN_A)
+        self.__determine_total_centroid_accelerations(grps)
 
         return grps_best
 
-    def find_best_number_of_clusters(self, KNN_A, min_clusters, max_clusters):
-        min_ratio = 1.0e30
+    def find_best_number_of_clusters(self, KNN_A,  # New
+                                     min_clusters, max_clusters):
+        min_accel = 1.0e30
         for i in range(min_clusters, max_clusters + 1):
             self.n_clusters = i
             self.determine_k_clusters(KNN_A)
-            if self.ratio_of_inertias < min_ratio:
+
+            if self.avg_force < min_accel:
                 best_number_of_clusters = i
-                min_ratio = self.ratio_of_inertias
+                min_accel = self.avg_force
+
+        # min_ratio = 1.0e30
+        # for i in range(min_clusters, max_clusters + 1):
+        #     self.n_clusters = i
+        #     self.determine_k_clusters(KNN_A)
+
+        #     if self.ratio_of_inertias < min_ratio:
+        #         best_number_of_clusters = i
+        #         min_ratio = self.ratio_of_inertias
 
         self.n_clusters = best_number_of_clusters
-        self.determine_k_clusters(KNN_A)
+        return self.determine_k_clusters(KNN_A)
 
     def plot_clusters(self, grps):
         """
@@ -467,8 +510,8 @@ class KMeans:
                 the points belonging to a centroid. See initial formation in
                 determine_k_clusters.
         """
-        Xc = [self.total_cnt[0], self.cnt_of_cnts[0]]
-        Yc = [self.total_cnt[1], self.cnt_of_cnts[1]]
+        Xc = []  # [self.total_cnt[0], self.cnt_of_cnts[0]]
+        Yc = []  # [self.total_cnt[1], self.cnt_of_cnts[1]]
 
         for i in range(len(grps)):
             Xc.append(grps[i]['centroids'][0])
@@ -494,6 +537,191 @@ class KMeans:
 
 
 ###############################################################################
+
+class Mass_Gravity_Simulator:
+    def __init__(self, pt_mss_D):
+        self.pt_mss_D = pt_mss_D
+        # format of pt_mss_D is
+        #     {pt_i: {'mass': mass_val,
+        #             'coordinates': [x1, x2, ... , xn]}}
+
+        self.pt_ref_list = list(self.pt_mss_D.keys())
+        self.num_pt_refs = len(self.pt_ref_list)
+        self.num_of_coordinates = len(self.pt_mss_D[0]['coordinates'])
+        self.center_of_mass = [0] * self.num_of_coordinates
+
+        self.total_mass = \
+            sum([pt_mss_D[i]['mass'] for i in range(self.num_pt_refs)])
+
+        self.ms_to_ms_unit_vec_D = {}
+        self.ms_to_ms_sqr_mags_D = {}
+
+        self.ms_to_cm_unit_vec_D = {}
+
+        self.forces = {}
+
+        self.attr_frc_unit_vec_D = {}
+
+        self.calculate_center_of_mass()
+        self.calculate_mass_to_mass_unit_vectors()
+        self.calculate_mass_to_center_of_mass_unit_vectors()
+        self.calculate_forces_on_masses_from_other_masses()
+
+        total = 0
+        for focus_pt in self.pt_ref_list:
+            total += self.forces[focus_pt]['mag']
+        # total /= self.num_pt_refs
+
+        self.avg_force = total
+
+    def calculate_center_of_mass(self):
+        for i in range(self.num_of_coordinates):
+            total_trq = 0
+            for j in range(self.num_pt_refs):
+                total_trq += self.pt_mss_D[j]['mass'] * \
+                             self.pt_mss_D[j]['coordinates'][i]
+            self.center_of_mass[i] = total_trq / self.total_mass
+
+    def calculate_mass_to_center_of_mass_unit_vectors(self):
+        # Get the deltas between each of the masses and store them
+        for focus_pt in self.pt_ref_list:
+            val = 0
+            self.ms_to_cm_unit_vec_D[focus_pt] = [0] * self.num_of_coordinates
+
+            for i in range(self.num_of_coordinates):
+                delta = self.center_of_mass[i] - \
+                    self.pt_mss_D[focus_pt]['coordinates'][i]
+                self.ms_to_cm_unit_vec_D[focus_pt][i] = delta
+
+        # Now turn each delta into a unit vector
+        for focus_pt in self.pt_ref_list:
+            array = self.ms_to_cm_unit_vec_D[focus_pt]
+            mag = sum([val ** 2 for val in array]) ** 0.5
+            updated_array = [val / mag for val in array]
+            self.ms_to_cm_unit_vec_D[focus_pt] = updated_array
+
+    def calculate_mass_to_mass_unit_vectors(self):
+        # Get the deltas between each of the masses and store them
+        for focus_pt in self.pt_ref_list:
+            self.ms_to_ms_unit_vec_D[focus_pt] = {}
+            self.ms_to_ms_sqr_mags_D[focus_pt] = {}
+            for other_pt in self.pt_ref_list:
+                if focus_pt == other_pt:
+                    continue
+                self.ms_to_ms_unit_vec_D[focus_pt][other_pt] = []
+                val = 0
+                for i in range(self.num_of_coordinates):
+                    delta = self.pt_mss_D[other_pt]['coordinates'][i] - \
+                        self.pt_mss_D[focus_pt]['coordinates'][i]
+                    self.ms_to_ms_unit_vec_D[focus_pt][other_pt].append(delta)
+                    val += delta ** 2
+                self.ms_to_ms_sqr_mags_D[focus_pt][other_pt] = val
+
+        # Now turn each delta into a unit vector
+        for focus_pt in self.pt_ref_list:
+            for other_pt in self.pt_ref_list:
+                if focus_pt == other_pt:
+                    continue
+                array = self.ms_to_ms_unit_vec_D[focus_pt][other_pt]
+                mag = sum([val ** 2 for val in array]) ** 0.5
+                updated_array = [val / mag for val in array]
+                self.ms_to_ms_unit_vec_D[focus_pt][other_pt] = updated_array
+
+    def calculate_forces_on_masses_from_other_masses(self):
+        for focus_pt in self.pt_ref_list:
+            self.forces[focus_pt] = {}
+            self.forces[focus_pt]['total'] = [0] * self.num_of_coordinates
+            for other_pt in self.pt_ref_list:
+                if focus_pt == other_pt:
+                    continue
+                force_mag = \
+                    self.pt_mss_D[other_pt]['mass'] * \
+                    self.pt_mss_D[focus_pt]['mass'] / \
+                    self.ms_to_ms_sqr_mags_D[focus_pt][other_pt]
+
+                self.forces[focus_pt][other_pt] = \
+                    [force_mag * val
+                        for val
+                        in self.ms_to_ms_unit_vec_D[focus_pt][other_pt]]
+
+            for other_pt in self.pt_ref_list:
+                if focus_pt == other_pt:
+                    continue
+                for i in range(self.num_of_coordinates):
+                    self.forces[focus_pt]['total'][i] += \
+                        self.forces[focus_pt][other_pt][i]
+
+        for focus_pt in self.pt_ref_list:
+            self.attr_frc_unit_vec_D[focus_pt] = [0] * self.num_of_coordinates
+            for i in range(self.num_of_coordinates):
+                self.attr_frc_unit_vec_D[focus_pt][i] = \
+                    self.forces[focus_pt]['total'][i]
+
+        for focus_pt in self.pt_ref_list:
+            array = self.attr_frc_unit_vec_D[focus_pt]
+            mag = sum([val ** 2 for val in array]) ** 0.5
+            self.forces[focus_pt]['mag'] = mag
+            updated_array = [val / mag for val in array]
+            self.attr_frc_unit_vec_D[focus_pt] = updated_array
+
+
+class Locations_Metrics:
+    def __init__(self, locations_array):
+        self.locations = locations_array
+        self.deltas_matrix = []
+        self.scalar_distances = []
+        self.number_of_locations = len(self.locations)
+        for i in range(self.number_of_locations - 1):
+            self.deltas_matrix.append([])
+            self.scalar_distances.append([])
+            for j in range(i + 1, self.number_of_locations):
+                self.deltas_matrix[i].append([])
+                self.scalar_distances[i].append([])
+
+    def get_deltas_between_points(self):
+        for i in range(self.number_of_locations - 1):
+            for j in range(i + 1, self.number_of_locations):
+                point = self.__get_deltas_between_two_points__(
+                        self.locations[i], self.locations[j])
+                for element in point:
+                    self.deltas_matrix[i][j-i-1].append(element)
+
+    def __get_deltas_between_two_points__(self, point_1, point_2):
+        points_ok_logic = len(point_1) == len(point_2)
+        err_msg = f'Dimensions of {point_1} and {point_2} are not the same.'
+        assert points_ok_logic, err_msg
+
+        delta = []
+        for i in range(len(point_1)):
+            delta.append(point_1[i] * point_2[i]) if i == 0 else \
+                delta.append(abs(point_1[i] - point_2[i]))
+
+        return delta
+
+    def get_scalar_distances_between_points(self):
+        for i in range(self.number_of_locations - 1):
+            for j in range(i + 1, self.number_of_locations):
+                self.scalar_distances[i][j-i-1] = \
+                    self.__euclidean_norms_of_deltas__(
+                        self.deltas_matrix[i][j-i-1])
+
+    def __euclidean_norms_of_deltas__(self, deltas):
+        denominator = 0
+        for element in deltas[1:]:
+            denominator += element ** 2
+
+        value = deltas[0] / denominator
+
+        return value
+
+    def get_sum_of_all_accelerations(self):
+        total_accel = 0
+        for row in self.scalar_distances:
+            for x in row:
+                total_accel += x
+
+        return total_accel
+
 
 class CreateFakeData:
     def __init__(self, seeds, half_range=2, points_per_cluster=10):
@@ -557,45 +785,69 @@ def line_plot(X, Y, x_label, y_label, title):
 ###############################################################################
 # Setup Data
 clr_arr = ['blue', 'red', 'yellow', 'green', 'cyan', 'magenta']
-seeds = [[3, 10], [10, 3], [3, 3], [10, 10], [17, 10], [17, 3]]
-half_range = 2
+seeds = [[3, 8], [8, 3], [3, 3]]  # , [10, 10], [17, 10]]  # , [17, 3]]
+half_range = 3
 
 # Create Fake Data
-fake_data = CreateFakeData(seeds, points_per_cluster=40)
+fake_data = CreateFakeData(seeds, half_range=2, points_per_cluster=100)
 KNN_A = fake_data.create_fake_data()
 # scatter_plot_points(KNN_A)
 
-km = KMeans(n_clusters=2)
-km.find_best_number_of_clusters(KNN_A, 2, 11)
-print(km.n_clusters)
-sys.exit()
+if 0:
+    Y1 = []
+    Y2 = []
+    X = list(range(2, 9))
+    for i in X:
+        km = KMeans(n_clusters=i)
+        val = km.determine_k_clusters(KNN_A)
+        Y1.append(val)
+        Y2.append(val / (i - 1))
 
-# Find the Clusters
-Y1 = []
-Y2 = []
-Y3 = []
-X = list(range(2, 11))
-for i in X:
-    km = KMeans(n_clusters=i)
-    grps = km.determine_k_clusters(KNN_A)
-    Y1.append(km.inertia_)
-    Y2.append(km.master_inertia)
-    Y3.append(km.ratio_of_inertias)
-    # print(f'{i}: {qnt}')
+    print(X)
+    print(Y1)
+    print(Y2)
 
+    line_plot(
+        X, Y1,
+        'Number Of Clusters', 'Total Accel',
+        'Total Accel vs Number Of Clusters')
 
-line_plot(
-    X, Y1,
-    'Number Of Clusters', 'Standard Inertia',
-    'Standard Inertia vs Number Of Clusters')
+    line_plot(
+        X, Y2,
+        'Number Of Clusters', 'Total Accel',
+        'Total Accel per DOC vs Number Of Clusters')
 
-line_plot(
-    X, Y2,
-    'Number Of Clusters', 'Master Inertia',
-    'Master Inertia vs Number Of Clusters')
+if 1:
+    km = KMeans(n_clusters=2)
+    grps = km.find_best_number_of_clusters(KNN_A, 2, 4)
+    print(km.n_clusters)
+    km.plot_clusters(grps)
 
-line_plot(
-    X, Y3,
-    'Number Of Clusters', 'Standard Inertia to Master Inertia Ratio',
-    'Standard Inertia to Master Inertia Ratio vs Number Of Clusters')
-# #############################################################################
+    # Find the Clusters using master_inertia
+    # Y1 = []
+    # Y2 = []
+    # Y3 = []
+    # X = list(range(2, 11))
+    # for i in X:
+    #     km = KMeans(n_clusters=i)
+    #     grps = km.determine_k_clusters(KNN_A)
+    #     Y1.append(km.inertia_)
+    #     Y2.append(km.master_inertia)
+    #     Y3.append(km.ratio_of_inertias)
+    #     # print(f'{i}: {qnt}')
+
+    # line_plot(
+    #     X, Y1,
+    #     'Number Of Clusters', 'Standard Inertia',
+    #     'Standard Inertia vs Number Of Clusters')
+
+    # line_plot(
+    #     X, Y2,
+    #     'Number Of Clusters', 'Master Inertia',
+    #     'Master Inertia vs Number Of Clusters')
+
+    # line_plot(
+    #     X, Y3,
+    #     'Number Of Clusters', 'Standard Inertia to Master Inertia Ratio',
+    #     'Standard Inertia to Master Inertia Ratio vs Number Of Clusters')
+    # #############################################################################
