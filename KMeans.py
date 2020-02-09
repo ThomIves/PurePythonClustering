@@ -55,8 +55,10 @@ class KMeans:
 
         for i in range(number_of_points):
             for j in range(number_of_dimensions):
-                mins[j] = KNN_A[i][j] if KNN_A[i][j] < mins[j]
-                maxs[j] = KNN_A[i][j] if KNN_A[i][j] > maxs[j]
+                if KNN_A[i][j] < mins[j]:
+                    mins[j] = KNN_A[i][j]
+                if KNN_A[i][j] > maxs[j]:
+                    maxs[j] = KNN_A[i][j]
 
         return mins, maxs
 
@@ -376,7 +378,8 @@ class KMeans:
 
                 delta_As = self.__find_Arrays_delta__(KNN_C, KNN_C_New)
 
-                break if delta_As == 0
+                if delta_As == 0:
+                    break
 
                 KNN_C = KNN_C_New
 
